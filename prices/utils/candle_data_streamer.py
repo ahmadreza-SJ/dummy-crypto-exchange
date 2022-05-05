@@ -2,9 +2,13 @@ import websocket
 import threading
 import signal
 
-WEBSOCKET_URL = "wss://stream.binance.com:9443/ws/{pair}@kline_{timestamp}"
+from celery import shared_task
+from .update_transactions import update_transactions
+
+WEBSOCKET_URL = "wss://stream.binance.com:9443/ws/{pair}@trade"
 
 
+@shared_task()
 def get_price_candle_data(on_message, pair, timestamp):
     websocket.enableTrace(True)
     ws = websocket.WebSocketApp(WEBSOCKET_URL.format(pair=pair, timestamp=timestamp), on_open=lambda webs: print("Connection Openned"),
@@ -12,6 +16,4 @@ def get_price_candle_data(on_message, pair, timestamp):
 
     x = threading.Thread(target=ws.run_forever)
     x.start()
-
-    signal.SIGINT(signal.SIGINT, lambda *args: ws.close())
 

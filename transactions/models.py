@@ -6,8 +6,26 @@ from profiles.models import Profile
 class MarketTransaction(models.Model):
     buy_asset = models.CharField(blank=False, null=False, max_length=20)
     sell_asset = models.CharField(blank=False, null=False, max_length=20)
+    amount_to_sell = models.FloatField(blank=False, null=False)
     profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
     date = models.DateField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if (self.sell_asset == 'btc' and self.amount_to_sell > self.profile.bitcoin_balance) or\
+                (self.sell_asset == 'usdt' and self.amount_to_sell > self.profile.tether_balance):
+            return
+        super(MarketTransaction, self).save(*args, **kwargs)
+
+    def execute(self, btc_price):
+
+        if self.buy_asset == 'usdt':
+            self.profile.tether_balance += self.amount_to_sell * btc_price
+            self.profile.bitcoin_balance -= self.amount_to_sell
+        if self.buy_asset == 'btc':
+            self.profile.bitcoin_balance += self.amount_to_sell / btc_price
+            self.profile.tether_balance -= self.amount_to_sell
+
+        self.profile.save()
 
 
 class LimitTransaction(MarketTransaction):
